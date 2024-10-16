@@ -2,9 +2,9 @@
 /shelf/
 /workspace.xml
 # Rider ignored files
+/contentModel.xml
 /projectSettingsUpdater.xml
 /.idea.CrazyBikeShop.iml
-/contentModel.xml
 /modules.xml
 # Editor-based HTTP Client requests
 /httpRequests/
