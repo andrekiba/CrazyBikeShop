@@ -1,0 +1,7 @@
+name: crazybikeshop
+description: Crazy Bike Shop
+runtime: dotnet
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: azure-csharp
