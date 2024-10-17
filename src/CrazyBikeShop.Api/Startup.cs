@@ -1,4 +1,6 @@
 using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.AppContainers;
 using CrazyBikeShop.Api.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -24,15 +26,17 @@ public class Startup
         services.AddSwagger(Configuration);
         services.AddAzureClients(builder =>
         {
-            builder.AddServiceBusAdministrationClientWithNamespace(Configuration["AsbNamespace"])
-                .WithName("apiAdmin");
-            builder.AddServiceBusClientWithNamespace(Configuration["AsbNamespace"])
-                .WithName("api");
-            builder.AddTableServiceClient(Configuration["StorageConnectionString"])
-                .WithName("api");
+            builder.AddTableServiceClient(Configuration["Storage:Tables"])
+                .WithName("tables");
+
+            builder.AddArmClient(Configuration["Arm:Subscription"])
+                .WithName("jobs");
             
             builder.UseCredential(new DefaultAzureCredential());
+            builder.ConfigureDefaults(Configuration.GetSection("AzureDefaults"));
         });
+
+        services.AddAutoMapper(typeof(ContainerAppJobResource));
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

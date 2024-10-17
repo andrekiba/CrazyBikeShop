@@ -6,6 +6,7 @@ using Pulumi;
 using Pulumi.AzureNative.Resources;
 using Deployment = Pulumi.Deployment;
 using Pulumi.AzureNative.App.Inputs;
+using Pulumi.AzureNative.Authorization;
 using Pulumi.AzureNative.ContainerRegistry;
 using Pulumi.AzureNative.ContainerRegistry.Inputs;
 using Pulumi.AzureNative.OperationalInsights;
@@ -21,8 +22,6 @@ namespace CrazyBikeShop.Infra;
 public class CrazyBikeShopStack : Stack
 {
     #region Outputs
-
-    [Output] public Output<string> AsbPrimaryConnectionString { get; set; }
     [Output] public Output<string> ApiImageTag { get; set; }
     [Output] public Output<string> OrderProcessorImageTag { get; set; }
     [Output] public Output<string> ApiUrl { get; set; }
@@ -68,45 +67,12 @@ public class CrazyBikeShopStack : Stack
             Kind = Storage.Kind.StorageV2
         });
 
-        var storageAccountKeys = Storage.ListStorageAccountKeys.Invoke(new Storage.ListStorageAccountKeysInvokeArgs
+        var ordersTable  = new Storage.Table("orders", new Storage.TableArgs
         {
-            ResourceGroupName = resourceGroup.Name,
-            AccountName = storageAccount.Name
+            TableName = "orders",
+            AccountName = storageAccount.Name,
+            ResourceGroupName = resourceGroup.Name
         });
-        var primaryStorageKey = storageAccountKeys.Apply(accountKeys =>
-        {
-            var firstKey = accountKeys.Keys[0].Value;
-            return Output.CreateSecret(firstKey);
-        });
-        var storageConnectionString = Output.Format(
-            $"DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName={storageAccount.Name};AccountKey={Output.Unsecret(primaryStorageKey)}");
-
-        #endregion
-
-        #region ASB
-
-        var asbNamespaceName = $"{projectName}{stackName}ns";
-        var asbNamespace = new ASB.Namespace(asbNamespaceName, new ASB.NamespaceArgs
-        {
-            NamespaceName = asbNamespaceName,
-            ResourceGroupName = resourceGroup.Name,
-            Sku = new ASB.Inputs.SBSkuArgs
-            {
-                Name = ASB.SkuName.Standard,
-                Tier = ASB.SkuTier.Standard
-            }
-        });
-        
-        const string ordersQueueName = "orders";
-        var ordersQueue = new ASB.Queue(ordersQueueName, new ASB.QueueArgs
-        {
-            QueueName = ordersQueueName,
-            ResourceGroupName = resourceGroup.Name,
-            NamespaceName = asbNamespace.Name
-        });
-
-        AsbPrimaryConnectionString = Output.Tuple(resourceGroup.Name, asbNamespace.Name).Apply(names =>
-            Output.Create(GetAsbPrimaryConnectionString(names.Item1, names.Item2)));
 
         #endregion
 
@@ -187,7 +153,7 @@ public class CrazyBikeShopStack : Stack
             },
             Step = new DockerBuildStepArgs
             {
-                ContextPath = "./../CrazyBikeShop.Api",
+                ContextPath = "./../",
                 DockerFilePath = "./../CrazyBikeShop.Api/Dockerfile",
                 ImageNames =
                 {
@@ -235,7 +201,7 @@ public class CrazyBikeShopStack : Stack
             },
             Step = new DockerBuildStepArgs
             {
-                ContextPath = "./../CrazyBikeShop.OrderProcessor",
+                ContextPath = "./../",
                 DockerFilePath = "./../CrazyBikeShop.OrderProcessor/Dockerfile",
                 ImageNames =
                 {
@@ -264,8 +230,6 @@ public class CrazyBikeShopStack : Stack
 
         #region Container Apps
 
-        const string asbConnectionSecret = "asb-connection";
-
         var kubeEnvName = $"{projectName}-{stackName}-env";
         var kubeEnv = new App.ManagedEnvironment(kubeEnvName, new App.ManagedEnvironmentArgs
         {
@@ -288,6 +252,10 @@ public class CrazyBikeShopStack : Stack
             ContainerAppName = apiName,
             ResourceGroupName = resourceGroup.Name,
             EnvironmentId = kubeEnv.Id,
+            Identity = new ManagedServiceIdentityArgs
+            {
+                Type = App.ManagedServiceIdentityType.SystemAssigned
+            },  
             Configuration = new ConfigurationArgs
             {
                 ActiveRevisionsMode = App.ActiveRevisionsMode.Single,
@@ -311,11 +279,6 @@ public class CrazyBikeShopStack : Stack
                     {
                         Name = $"{containerRegistryName}-admin-pwd",
                         Value = adminPassword
-                    },
-                    new SecretArgs
-                    {
-                        Name = asbConnectionSecret,
-                        Value = AsbPrimaryConnectionString
                     }
                 }
             },
@@ -326,21 +289,13 @@ public class CrazyBikeShopStack : Stack
                     new ContainerArgs
                     {
                         Name = apiImageName,
-                        Image = ApiImageTag,
-                        Env = new[]
-                        {
-                            new EnvironmentVarArgs
-                            {
-                                Name = "AsbConnectionString",
-                                SecretRef = asbConnectionSecret
-                            }
-                        }
+                        Image = ApiImageTag
                     }
                 },
                 Scale = new ScaleArgs
                 {
                     MinReplicas = 1,
-                    MaxReplicas = 1,
+                    MaxReplicas = 1
                     /*Rules = new List<ScaleRuleArgs>
                     {
                         new ScaleRuleArgs
@@ -370,9 +325,13 @@ public class CrazyBikeShopStack : Stack
             JobName = orderProcessorName,
             ResourceGroupName = resourceGroup.Name,
             EnvironmentId = kubeEnv.Id,
+            Identity = new ManagedServiceIdentityArgs
+            {
+                Type = App.ManagedServiceIdentityType.SystemAssigned
+            },
             Configuration = new JobConfigurationArgs
             {
-                TriggerType = App.TriggerType.Event,
+                TriggerType = App.TriggerType.Manual,
                 EventTriggerConfig = new JobConfigurationEventTriggerConfigArgs
                 {
                     Parallelism = 1,
@@ -380,25 +339,7 @@ public class CrazyBikeShopStack : Stack
                     Scale = new JobScaleArgs
                     {
                         MinExecutions = 1,
-                        MaxExecutions = 1,
-                        Rules = new []
-                        {
-                            new JobScaleRuleArgs
-                            {
-                                Name = "orders-scaling-rule",
-                                Type = "azure-servicebus",
-                                Metadata = new Dictionary<string, object>
-                                {
-                                    ["queueName"] = ordersQueueName,
-                                    ["messageCount"] = 1
-                                },
-                                Auth = new ScaleRuleAuthArgs
-                                {
-                                    TriggerParameter = "connection",
-                                    SecretRef = asbConnectionSecret
-                                }
-                            }
-                        }
+                        MaxExecutions = 1
                     }
                 },
                 ReplicaTimeout = 120,
@@ -418,11 +359,6 @@ public class CrazyBikeShopStack : Stack
                     {
                         Name = $"{containerRegistryName}-admin-pwd",
                         Value = adminPassword
-                    },
-                    new SecretArgs
-                    {
-                        Name = asbConnectionSecret,
-                        Value = AsbPrimaryConnectionString
                     }
                 }
             },
@@ -433,15 +369,7 @@ public class CrazyBikeShopStack : Stack
                     new ContainerArgs
                     {
                         Name = orderProcessorImageName,
-                        Image = OrderProcessorImageTag,
-                        Env = new[]
-                        {
-                            new EnvironmentVarArgs
-                            {
-                                Name = "AsbConnectionString",
-                                SecretRef = asbConnectionSecret
-                            }
-                        }
+                        Image = OrderProcessorImageTag
                     }
                 }
             }
@@ -449,6 +377,24 @@ public class CrazyBikeShopStack : Stack
         {
             IgnoreChanges = new List<string> { "tags" },
             DependsOn = new InputList<Resource> { orderProcessorBuildTaskRun }
+        });
+
+        #endregion
+
+        #region Roles
+
+        var apiTableStorageDataContributorRole = new RoleAssignment("apiTableStorageDataContributorRole", new RoleAssignmentArgs
+        {
+            PrincipalId = api.Identity.Apply(i => i.PrincipalId),
+            RoleDefinitionId = "Storage Table Data Contributor",
+            Scope = storageAccount.Id
+        });
+        
+        var opTableStorageDataContributorRole = new RoleAssignment("opTableStorageDataContributorRole", new RoleAssignmentArgs
+        {
+            PrincipalId = orderProcessor.Identity.Apply(i => i.PrincipalId),
+            RoleDefinitionId = "Storage Table Data Contributor",
+            Scope = storageAccount.Id
         });
 
         #endregion

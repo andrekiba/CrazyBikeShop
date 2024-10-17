@@ -35,12 +35,11 @@ public static class Program
             {
                 services.AddAzureClients(builder =>
                 {
-                    var asbNamespace = hostContext.Configuration["AsbNamespace"];
-                    builder.AddServiceBusAdministrationClientWithNamespace(asbNamespace)
-                        .WithName("orderProcessorAdmin");
-                    builder.AddServiceBusClientWithNamespace(asbNamespace)
-                        .WithName("orderProcessor");
+                    builder.AddTableServiceClient(hostContext.Configuration["Storage:Tables"])
+                        .WithName("tables");
+            
                     builder.UseCredential(new DefaultAzureCredential());
+                    builder.ConfigureDefaults(hostContext.Configuration.GetSection("AzureDefaults"));
                 });
                 services.AddHostedService<Worker>();
             });

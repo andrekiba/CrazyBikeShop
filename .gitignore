@@ -302,3 +302,4 @@ __pycache__/
 
 # docker-compose override
 **/docker-compose.override.yml
+src/.idea/.idea.CrazyBikeShop/.idea/

@@ -9,6 +9,8 @@ public class Order : ITableEntity
     public string RowKey { get; set; }
     public DateTimeOffset? Timestamp { get; set; }
     public ETag ETag { get; set; }
+    public string Status { get; set; } = OrderStatus.Pending;
+    public DateTime? CompletedAt { get; set; }
 
     public Order()
     {
