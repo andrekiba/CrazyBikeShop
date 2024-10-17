@@ -11,10 +11,4 @@ public class Order : ITableEntity
     public ETag ETag { get; set; }
     public string Status { get; set; } = OrderStatus.Pending;
     public DateTime? CompletedAt { get; set; }
-
-    public Order()
-    {
-        PartitionKey = Guid.NewGuid().ToString();
-        RowKey = Guid.NewGuid().ToString();
-    }
 }

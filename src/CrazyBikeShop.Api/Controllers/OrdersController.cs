@@ -41,7 +41,7 @@ public class OrdersController : ControllerBase
     }
     
     [HttpPost]
-    public async Task<IActionResult> CreateOrder()
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrder newOrder)
     {
         logger.LogInformation("Order received");
         
@@ -52,7 +52,7 @@ public class OrdersController : ControllerBase
         var orderResponse = await orders.AddEntityAsync(new Order
         {
             PartitionKey = OrdersTable,
-            RowKey = orderId, 
+            RowKey = newOrder.Id, 
             Status = OrderStatus.Pending
         });
         
