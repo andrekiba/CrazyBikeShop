@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Azure.Identity;
 using Microsoft.Extensions.Azure;
@@ -35,7 +36,7 @@ public static class Program
             {
                 services.AddAzureClients(builder =>
                 {
-                    builder.AddTableServiceClient(hostContext.Configuration["Storage:Tables"])
+                    builder.AddTableServiceClient(new Uri(hostContext.Configuration["Storage:Tables"]!))
                         .WithName("tables");
             
                     builder.UseCredential(new DefaultAzureCredential());

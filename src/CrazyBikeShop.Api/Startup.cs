@@ -1,3 +1,4 @@
+using System;
 using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
@@ -26,7 +27,7 @@ public class Startup
         services.AddSwagger(Configuration);
         services.AddAzureClients(builder =>
         {
-            builder.AddTableServiceClient(Configuration["Storage:Tables"])
+            builder.AddTableServiceClient(new Uri(Configuration["Storage:Tables"]!))
                 .WithName("tables");
 
             builder.AddArmClient(Configuration["Arm:Subscription"])

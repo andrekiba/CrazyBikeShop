@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Pulumi;
@@ -121,10 +122,10 @@ public class CrazyBikeShopStack : Stack
         var buildContextHash = buildContext.GenerateHash(excludedDirectories, excludedFiles);
 
         const string apiImageName = "api";
-        ApiImageTag = Output.Format($"{containerRegistry.LoginServer}/{apiImageName}:latest");
+        ApiImageTag = Output.Format($"{containerRegistry.LoginServer}/{apiImageName}:latest-{buildContextHash[..6]}");
 
         const string orderProcessorImageName = "op";
-        OrderProcessorImageTag = Output.Format($"{containerRegistry.LoginServer}/{orderProcessorImageName}:latest");
+        OrderProcessorImageTag = Output.Format($"{containerRegistry.LoginServer}/{orderProcessorImageName}:latest-{buildContextHash[..6]}");
 
         #endregion
 
@@ -139,7 +140,7 @@ public class CrazyBikeShopStack : Stack
                 Create = azAcrBuildAndPush,
                 Environment = new InputMap<string>
                 {
-                    { "IMAGENAME", apiImageName },
+                    { "IMAGENAME", ApiImageTag },
                     { "REGISTRY", containerRegistry.Name },
                     { "DOCKERFILE", Path.Combine(buildContext, "CrazyBikeShop.Api", "Dockerfile") },
                     { "CONTEXT", buildContext }
@@ -161,7 +162,7 @@ public class CrazyBikeShopStack : Stack
                 Create = azAcrBuildAndPush,
                 Environment = new InputMap<string>
                 {
-                    { "IMAGENAME", orderProcessorImageName},
+                    { "IMAGENAME", OrderProcessorImageTag },
                     { "REGISTRY", containerRegistry.Name },
                     { "DOCKERFILE", Path.Combine(buildContext, "CrazyBikeShop.OrderProcessor", "Dockerfile") },
                     { "CONTEXT", buildContext }
