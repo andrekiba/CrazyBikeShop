@@ -463,6 +463,7 @@ public class CrazyBikeShopStack : Stack
         
         const string storageTableDataContributor = "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3";
         const string acrPull = "7f951dda-4ed3-4680-a7ca-43fe172d538d";
+        const string contributor = "b24988ac-6180-42a0-ab88-20f7382dd24c";
 
         var apiTableStorageDataContributorRoleName = $"{projectName}-{stackName}-api-tsdc-role";
         var apiTableStorageDataContributorRole = new RoleAssignment(apiTableStorageDataContributorRoleName, new RoleAssignmentArgs
@@ -502,6 +503,16 @@ public class CrazyBikeShopStack : Stack
             RoleAssignmentName = "c1ad4cba-43a3-4ef0-bee5-c247b795d8c6",
             RoleDefinitionId = $"/providers/Microsoft.Authorization/roleDefinitions/{acrPull}",
             Scope = containerRegistry.Id
+        });
+        
+        var apiJobContributorRoleName = $"{projectName}-{stackName}-api-job-contributor-role";
+        var apiJobContributorRole = new RoleAssignment(apiJobContributorRoleName, new RoleAssignmentArgs
+        {
+            PrincipalId = api.Identity.Apply(i => i.PrincipalId),
+            PrincipalType = PrincipalType.ServicePrincipal,
+            RoleAssignmentName = "fd1b08b0-e8a9-4c61-b0e5-97555dc2c09e",
+            RoleDefinitionId = $"/providers/Microsoft.Authorization/roleDefinitions/{contributor}",
+            Scope = orderProcessor.Id
         });
         
         #endregion

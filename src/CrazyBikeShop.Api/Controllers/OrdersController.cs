@@ -43,10 +43,8 @@ public class OrdersController : ControllerBase
         logger.LogInformation("Order received");
         
         await tables.CreateTableIfNotExistsAsync(OrdersTable);
-        
-        //var orderId = Guid.NewGuid().ToString();
 
-        var orderResponse = await orders.AddEntityAsync(new Order
+        var orderResponse = await orders.UpsertEntityAsync(new Order
         {
             PartitionKey = OrdersTable,
             RowKey = newOrder.Id, 
@@ -88,7 +86,7 @@ public class OrdersController : ControllerBase
             return Redirect($"/orders/{orderId}");
         
         Response.Headers.Append("Retry-After", "10");
-        return Ok();
+        return Ok(order);
     }
     
     [HttpGet("{orderId}")]
