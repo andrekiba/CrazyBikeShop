@@ -1,12 +1,11 @@
-using System;
 using System.Threading.Tasks;
-using AutoMapper;
 using Azure;
 using Azure.Data.Tables;
 using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
+using CrazyBikeShop.Api.Infrastructure;
 using CrazyBikeShop.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -24,18 +23,16 @@ public class OrdersController : ControllerBase
     
     readonly ILogger<OrdersController> logger;
     readonly IConfiguration configuration;
-    readonly IMapper mapper;
     readonly TableServiceClient tables;
     readonly TableClient orders;
     readonly ArmClient armClient;
 
     public OrdersController(IAzureClientFactory<TableServiceClient> tsFactory, IAzureClientFactory<ArmClient> armFactory, 
-        IMapper mapper, IConfiguration configuration, ILogger<OrdersController> logger)
+        IConfiguration configuration, ILogger<OrdersController> logger)
     {
         tables = tsFactory.CreateClient("tables");
         orders = tables.GetTableClient(OrdersTable);
         armClient = armFactory.CreateClient("jobs");
-        this.mapper = mapper;
         this.configuration = configuration;
         this.logger = logger;
     }
@@ -47,7 +44,7 @@ public class OrdersController : ControllerBase
         
         await tables.CreateTableIfNotExistsAsync(OrdersTable);
         
-        var orderId = Guid.NewGuid().ToString();
+        //var orderId = Guid.NewGuid().ToString();
 
         var orderResponse = await orders.AddEntityAsync(new Order
         {
@@ -62,20 +59,20 @@ public class OrdersController : ControllerBase
         var subId = SubscriptionResource.CreateResourceIdentifier(configuration["Arm:Subscription"]);
         var sub = armClient.GetSubscriptionResource(subId);
 
-        const string acaJobName = "crazybikeshop-dev-job-op";
+        const string acaJobName = "crazybikeshop-main-job-op";
         var acaJobId = ContainerAppJobResource.CreateResourceIdentifier(configuration["Arm:Subscription"], configuration["Arm:ResourceGroup"], acaJobName);
         var acaJob = armClient.GetContainerAppJobResource(acaJobId);
         acaJob = await acaJob.GetAsync();
 
         var template = acaJob.Data.Template;
         var env = template.Containers[0].Env;
-        env.Add(new ContainerAppEnvironmentVariable{ Name = "ORDER_ID", Value = orderId });
-
-        var executionTemplate = mapper.Map<ContainerAppJobTemplate, ContainerAppJobExecutionTemplate>(template);
+        env.Add(new ContainerAppEnvironmentVariable{ Name = "ORDER_ID", Value = newOrder.Id });
+        
+        var executionTemplate = template.ToExecutionTemplate();
         
         var armOperation = await acaJob.StartAsync(WaitUntil.Started, executionTemplate);
         
-        var location = Url.Action($"/orders/staus/{orderId}");
+        var location = Url.Action($"/orders/staus/{newOrder.Id}");
         return Accepted(location);
     }
     

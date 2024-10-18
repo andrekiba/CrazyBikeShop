@@ -36,8 +36,6 @@ public class Startup
             builder.UseCredential(new DefaultAzureCredential());
             builder.ConfigureDefaults(Configuration.GetSection("AzureDefaults"));
         });
-
-        services.AddAutoMapper(typeof(ContainerAppJobResource));
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

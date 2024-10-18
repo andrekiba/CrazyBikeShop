@@ -50,16 +50,16 @@ public class Worker : BackgroundService
             
             var order = orderResponse.Value;
             
-            var processingTime = TimeSpan.FromSeconds(new Random().Next(1,10) * 60);
+            var processingTime = TimeSpan.FromSeconds(new Random().Next(1,10) * 10);
             await Task.Delay(processingTime, stoppingToken);
             
             order.Status = Shared.OrderStatus.Completed;
-            order.CompletedAt = DateTime.Now;
+            order.CompletedAt = DateTimeOffset.Now;
             await orders.UpdateEntityAsync(order, order.ETag, cancellationToken: stoppingToken);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Error processing message");
+            logger.LogError(e, "Error processing job");
         }
         finally
         {

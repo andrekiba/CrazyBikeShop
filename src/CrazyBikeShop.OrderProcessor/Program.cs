@@ -4,6 +4,7 @@ using Azure.Identity;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
@@ -22,15 +23,18 @@ public static class Program
         return Host.CreateDefaultBuilder(args)
             .ConfigureLogging((hostBuilderContext, loggingBuilder) =>
             {
+                /*
                 var logger = new LoggerConfiguration()
                     .WriteTo.Console(
                         outputTemplate:
                         "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
                         theme: AnsiConsoleTheme.Code)
-                    .MinimumLevel.Error()
+                    .MinimumLevel.Warning()
                     .CreateLogger();
-
                 loggingBuilder.AddSerilog(logger);
+                */
+                loggingBuilder.ClearProviders();
+                loggingBuilder.AddConsole();
             })
             .ConfigureServices((hostContext, services) =>
             {
@@ -38,11 +42,12 @@ public static class Program
                 {
                     builder.AddTableServiceClient(new Uri(hostContext.Configuration["Storage:Tables"]!))
                         .WithName("tables");
-            
+
                     builder.UseCredential(new DefaultAzureCredential());
                     builder.ConfigureDefaults(hostContext.Configuration.GetSection("AzureDefaults"));
                 });
                 services.AddHostedService<Worker>();
             });
+        //.UseSerilog();
     }
 }

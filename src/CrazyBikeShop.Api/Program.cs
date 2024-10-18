@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
@@ -21,18 +22,24 @@ namespace CrazyBikeShop.Api
             return Host.CreateDefaultBuilder(args)
                 .ConfigureLogging((hostBuilderContext, loggingBuilder) =>
                 {
+                    /*
                     var logger = new LoggerConfiguration()
-                        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}", theme: AnsiConsoleTheme.Code)
-                        .MinimumLevel.Information()
+                        .WriteTo.Console(
+                            outputTemplate:
+                            "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
+                            theme: AnsiConsoleTheme.Code)
+                        .MinimumLevel.Warning()
                         .CreateLogger();
-
                     loggingBuilder.AddSerilog(logger);
+                    */
+                    loggingBuilder.ClearProviders();
+                    loggingBuilder.AddConsole();
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
-                })
-                .UseSerilog();
+                });
+            //.UseSerilog();
         }
     }
 }

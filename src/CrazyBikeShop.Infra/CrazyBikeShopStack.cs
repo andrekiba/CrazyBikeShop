@@ -412,7 +412,7 @@ public class CrazyBikeShopStack : Stack
                         MaxExecutions = 1
                     }
                 },
-                ReplicaTimeout = 120,
+                ReplicaTimeout = 180,
                 ReplicaRetryLimit = 2,
                 Registries =
                 {
