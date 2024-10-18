@@ -59,7 +59,7 @@ public class Worker : BackgroundService
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Error processing job");
+            logger.LogError(e, "Error processing order");
         }
         finally
         {

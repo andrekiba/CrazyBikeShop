@@ -20,26 +20,18 @@ namespace CrazyBikeShop.Api
         static IHostBuilder CreateHostBuilder(string[] args)
         {
             return Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((hostBuilderContext, loggingBuilder) =>
-                {
-                    /*
-                    var logger = new LoggerConfiguration()
-                        .WriteTo.Console(
-                            outputTemplate:
-                            "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
-                            theme: AnsiConsoleTheme.Code)
-                        .MinimumLevel.Warning()
-                        .CreateLogger();
-                    loggingBuilder.AddSerilog(logger);
-                    */
-                    loggingBuilder.ClearProviders();
-                    loggingBuilder.AddConsole();
-                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                })
+                .UseSerilog((context, logger) =>
+                {
+                    logger.MinimumLevel.Information();
+                    logger.WriteTo.Console(
+                        outputTemplate:
+                        "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
+                        theme: AnsiConsoleTheme.Code);
                 });
-            //.UseSerilog();
         }
     }
 }

@@ -21,21 +21,6 @@ public static class Program
     static IHostBuilder CreateHostBuilder(string[] args)
     {
         return Host.CreateDefaultBuilder(args)
-            .ConfigureLogging((hostBuilderContext, loggingBuilder) =>
-            {
-                /*
-                var logger = new LoggerConfiguration()
-                    .WriteTo.Console(
-                        outputTemplate:
-                        "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
-                        theme: AnsiConsoleTheme.Code)
-                    .MinimumLevel.Warning()
-                    .CreateLogger();
-                loggingBuilder.AddSerilog(logger);
-                */
-                loggingBuilder.ClearProviders();
-                loggingBuilder.AddConsole();
-            })
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddAzureClients(builder =>
@@ -47,7 +32,13 @@ public static class Program
                     builder.ConfigureDefaults(hostContext.Configuration.GetSection("AzureDefaults"));
                 });
                 services.AddHostedService<Worker>();
+            }).UseSerilog((context, logger) =>
+            {
+                logger.MinimumLevel.Information();
+                logger.WriteTo.Console(
+                    outputTemplate:
+                    "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
+                    theme: AnsiConsoleTheme.Code);
             });
-        //.UseSerilog();
     }
 }

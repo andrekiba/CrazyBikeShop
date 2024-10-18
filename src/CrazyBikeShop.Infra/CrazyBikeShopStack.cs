@@ -297,98 +297,6 @@ public class CrazyBikeShopStack : Stack
             }
         });
 
-        var apiName = $"{projectName}-{stackName}-ca-api";
-        var api = new App.ContainerApp(apiName, new App.ContainerAppArgs
-        {
-            ContainerAppName = apiName,
-            ResourceGroupName = resourceGroup.Name,
-            EnvironmentId = kubeEnv.Id,
-            Identity = new ManagedServiceIdentityArgs
-            {
-                Type = App.ManagedServiceIdentityType.SystemAssigned
-            },  
-            Configuration = new ConfigurationArgs
-            {
-                ActiveRevisionsMode = App.ActiveRevisionsMode.Single,
-                Ingress = new IngressArgs
-                {
-                    External = true,
-                    TargetPort = 8080,
-                    //ExposedPort = 80
-                },
-                Registries =
-                {
-                    new RegistryCredentialsArgs
-                    {
-                        Server = containerRegistry.LoginServer,
-                        Username = adminUsername,
-                        PasswordSecretRef = $"{containerRegistryName}-admin-pwd"
-                    }
-                },
-                Secrets =
-                {
-                    new SecretArgs
-                    {
-                        Name = $"{containerRegistryName}-admin-pwd",
-                        Value = adminPassword
-                    }
-                }
-            },
-            Template = new TemplateArgs
-            {
-                Containers =
-                {
-                    new ContainerArgs
-                    {
-                        Name = apiImageName,
-                        Image = ApiImageTag,
-                        Env =
-                        {
-                            new EnvironmentVarArgs
-                            {
-                                Name = "Storage__Tables",
-                                Value = storageAccount.PrimaryEndpoints.Apply(e => e.Table)
-                            },
-                            new EnvironmentVarArgs
-                            {
-                                Name = "Arm__Subscription",
-                                Value = azureConfig.Require("subscriptionId")
-                            },
-                            new EnvironmentVarArgs
-                            {
-                                Name = "Arm__ResourceGroup",
-                                Value = resourceGroup.Name
-                            },
-                        }
-                    }
-                },
-                Scale = new ScaleArgs
-                {
-                    MinReplicas = 1,
-                    MaxReplicas = 1
-                    /*Rules = new List<ScaleRuleArgs>
-                    {
-                        new ScaleRuleArgs
-                        {
-                            Name = "api-http-requests",
-                            Http = new HttpScaleRuleArgs
-                            {
-                                Metadata =
-                                {
-                                    { "concurrentRequests", "50" }
-                                }
-                            }
-                        }
-                    }*/
-                }
-            }
-        }, new CustomResourceOptions
-        {
-            IgnoreChanges = new List<string> { "tags" },
-            DependsOn = new InputList<Resource> { apiBuildPushCommand }
-        });
-        ApiUrl = Output.Format($"https://{api.Configuration.Apply(c => c.Ingress).Apply(i => i.Fqdn)}/swagger");
-
         var orderProcessorName = $"{projectName}-{stackName}-job-op";
         var orderProcessor = new App.Job(orderProcessorName, new App.JobArgs
         {
@@ -456,6 +364,102 @@ public class CrazyBikeShopStack : Stack
             IgnoreChanges = new List<string> { "tags" },
             DependsOn = new InputList<Resource> { opBuildPushCommand }
         });
+        
+        var apiName = $"{projectName}-{stackName}-ca-api";
+        var api = new App.ContainerApp(apiName, new App.ContainerAppArgs
+        {
+            ContainerAppName = apiName,
+            ResourceGroupName = resourceGroup.Name,
+            EnvironmentId = kubeEnv.Id,
+            Identity = new ManagedServiceIdentityArgs
+            {
+                Type = App.ManagedServiceIdentityType.SystemAssigned
+            },  
+            Configuration = new ConfigurationArgs
+            {
+                ActiveRevisionsMode = App.ActiveRevisionsMode.Single,
+                Ingress = new IngressArgs
+                {
+                    External = true,
+                    TargetPort = 8080
+                },
+                Registries =
+                {
+                    new RegistryCredentialsArgs
+                    {
+                        Server = containerRegistry.LoginServer,
+                        Username = adminUsername,
+                        PasswordSecretRef = $"{containerRegistryName}-admin-pwd"
+                    }
+                },
+                Secrets =
+                {
+                    new SecretArgs
+                    {
+                        Name = $"{containerRegistryName}-admin-pwd",
+                        Value = adminPassword
+                    }
+                }
+            },
+            Template = new TemplateArgs
+            {
+                Containers =
+                {
+                    new ContainerArgs
+                    {
+                        Name = apiImageName,
+                        Image = ApiImageTag,
+                        Env =
+                        {
+                            new EnvironmentVarArgs
+                            {
+                                Name = "Storage__Tables",
+                                Value = storageAccount.PrimaryEndpoints.Apply(e => e.Table)
+                            },
+                            new EnvironmentVarArgs
+                            {
+                                Name = "Job__Subscription",
+                                Value = azureConfig.Require("subscriptionId")
+                            },
+                            new EnvironmentVarArgs
+                            {
+                                Name = "Job__ResourceGroup",
+                                Value = resourceGroup.Name
+                            },
+                            new EnvironmentVarArgs
+                            {
+                                Name = "Job__Name",
+                                Value = orderProcessor.Name
+                            },
+                        }
+                    }
+                },
+                Scale = new ScaleArgs
+                {
+                    MinReplicas = 1,
+                    MaxReplicas = 1
+                    /*Rules = new List<ScaleRuleArgs>
+                    {
+                        new ScaleRuleArgs
+                        {
+                            Name = "api-http-requests",
+                            Http = new HttpScaleRuleArgs
+                            {
+                                Metadata =
+                                {
+                                    { "concurrentRequests", "50" }
+                                }
+                            }
+                        }
+                    }*/
+                }
+            }
+        }, new CustomResourceOptions
+        {
+            IgnoreChanges = new List<string> { "tags" },
+            DependsOn = new InputList<Resource> { apiBuildPushCommand, orderProcessor }
+        });
+        ApiUrl = Output.Format($"https://{api.Configuration.Apply(c => c.Ingress).Apply(i => i.Fqdn)}/swagger");
 
         #endregion
 

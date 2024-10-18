@@ -54,11 +54,10 @@ public class OrdersController : ControllerBase
         if (orderResponse.IsError) 
             return BadRequest();
 
-        var subId = SubscriptionResource.CreateResourceIdentifier(configuration["Arm:Subscription"]);
-        var sub = armClient.GetSubscriptionResource(subId);
-
-        const string acaJobName = "crazybikeshop-main-job-op";
-        var acaJobId = ContainerAppJobResource.CreateResourceIdentifier(configuration["Arm:Subscription"], configuration["Arm:ResourceGroup"], acaJobName);
+        //var subId = SubscriptionResource.CreateResourceIdentifier(configuration["Arm:Subscription"]);
+        //var sub = armClient.GetSubscriptionResource(subId);
+        
+        var acaJobId = ContainerAppJobResource.CreateResourceIdentifier(configuration["Job:Subscription"], configuration["Job:ResourceGroup"], configuration["Job:Name"]);
         var acaJob = armClient.GetContainerAppJobResource(acaJobId);
         acaJob = await acaJob.GetAsync();
 
