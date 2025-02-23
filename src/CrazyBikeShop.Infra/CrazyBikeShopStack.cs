@@ -436,7 +436,7 @@ public class CrazyBikeShopStack : Stack
                 },
                 Scale = new ScaleArgs
                 {
-                    MinReplicas = 1,
+                    MinReplicas = 0,
                     MaxReplicas = 1
                     /*Rules = new List<ScaleRuleArgs>
                     {
