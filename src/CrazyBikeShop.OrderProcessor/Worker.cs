@@ -9,24 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace CrazyBikeShop.OrderProcessor;
 
-public class Worker : BackgroundService
+public class Worker(
+    IConfiguration configuration,
+    IHostApplicationLifetime appLifetime,
+    IAzureClientFactory<TableServiceClient> tsFactory,
+    ILogger<Worker> logger)
+    : BackgroundService
 {
     const string OrdersTable = "orders";
-    
-    readonly IConfiguration configuration;
-    readonly IHostApplicationLifetime appLifetime;
-    readonly TableServiceClient tables;
+    readonly TableServiceClient tables = tsFactory.CreateClient("tables");
     TableClient orders;
-    readonly ILogger<Worker> logger;
-
-    public Worker(IConfiguration configuration, IHostApplicationLifetime appLifetime,
-        IAzureClientFactory<TableServiceClient> tsFactory, ILogger<Worker> logger)
-    {
-        this.configuration = configuration;
-        this.appLifetime = appLifetime;
-        tables = tsFactory.CreateClient("tables");
-        this.logger = logger;
-    }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
