@@ -131,7 +131,8 @@ public class CrazyBikeShopStack : Stack
 
         #region ACR commands
 
-        var azAcrBuildAndPush = Output.Format($"az acr build -t $IMAGENAME -r $REGISTRY -f $DOCKERFILE --platform linux/amd64 $CONTEXT");
+        var azAcrBuildAndPush = Output.Format($"az acr build -t %IMAGENAME% -r %REGISTRY% -f %DOCKERFILE% --platform linux/amd64 %CONTEXT%");
+        //var azAcrBuildAndPush = Output.Format($"az acr build -t $IMAGENAME -r $REGISTRY -f $DOCKERFILE --platform linux/amd64 $CONTEXT");
         
         var apiBuildPushCommand = new Command("api-build-and-push",
             new CommandArgs
@@ -361,7 +362,7 @@ public class CrazyBikeShopStack : Stack
             }
         }, new CustomResourceOptions
         {
-            IgnoreChanges = new List<string> { "tags" },
+            IgnoreChanges = ["tags"],
             DependsOn = new InputList<Resource> { opBuildPushCommand }
         });
         
@@ -456,7 +457,7 @@ public class CrazyBikeShopStack : Stack
             }
         }, new CustomResourceOptions
         {
-            IgnoreChanges = new List<string> { "tags" },
+            IgnoreChanges = ["tags"],
             DependsOn = new InputList<Resource> { apiBuildPushCommand, orderProcessor }
         });
         ApiUrl = Output.Format($"https://{api.Configuration.Apply(c => c.Ingress).Apply(i => i.Fqdn)}/swagger");
